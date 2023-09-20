@@ -217,7 +217,7 @@ public class MySqlDatabase extends Database {
     public Optional<DataSnapshot.Packed> getLatestSnapshot(@NotNull User user) {
         try (Connection connection = getConnection()) {
             try (PreparedStatement statement = connection.prepareStatement(formatStatementTables("""
-                    SELECT `version_uuid`, `timestamp`, `save_cause`, `pinned`, `data`
+                    SELECT `version_uuid`, `timestamp`, `save_cause`, `pinned`, `data`, `origin_server`
                     FROM `%user_data_table%`
                     WHERE `player_uuid`=?
                     ORDER BY `timestamp` DESC
@@ -244,7 +244,7 @@ public class MySqlDatabase extends Database {
         final List<DataSnapshot.Packed> retrievedData = new ArrayList<>();
         try (Connection connection = getConnection()) {
             try (PreparedStatement statement = connection.prepareStatement(formatStatementTables("""
-                    SELECT `version_uuid`, `timestamp`, `save_cause`, `pinned`, `data`
+                    SELECT `version_uuid`, `timestamp`, `save_cause`, `pinned`, `data`, `origin_server`
                     FROM `%user_data_table%`
                     WHERE `player_uuid`=?
                     ORDER BY `timestamp` DESC;"""))) {
@@ -269,7 +269,7 @@ public class MySqlDatabase extends Database {
     public Optional<DataSnapshot.Packed> getSnapshot(@NotNull User user, @NotNull UUID versionUuid) {
         try (Connection connection = getConnection()) {
             try (PreparedStatement statement = connection.prepareStatement(formatStatementTables("""
-                    SELECT `version_uuid`, `timestamp`, `save_cause`, `pinned`, `data`
+                    SELECT `version_uuid`, `timestamp`, `save_cause`, `pinned`, `data`, `origin_server`
                     FROM `%user_data_table%`
                     WHERE `player_uuid`=? AND `version_uuid`=?
                     ORDER BY `timestamp` DESC
@@ -355,14 +355,15 @@ public class MySqlDatabase extends Database {
         try (Connection connection = getConnection()) {
             try (PreparedStatement statement = connection.prepareStatement(formatStatementTables("""
                     INSERT INTO `%user_data_table%`
-                    (`player_uuid`,`version_uuid`,`timestamp`,`save_cause`,`pinned`,`data`)
-                    VALUES (?,?,?,?,?,?);"""))) {
+                    (`player_uuid`,`version_uuid`,`timestamp`,`save_cause`,`pinned`,`data`,`origin_server`)
+                    VALUES (?,?,?,?,?,?,?);"""))) {
                 statement.setString(1, user.getUuid().toString());
                 statement.setString(2, data.getId().toString());
                 statement.setTimestamp(3, Timestamp.from(data.getTimestamp().toInstant()));
                 statement.setString(4, data.getSaveCause().name());
                 statement.setBoolean(5, data.isPinned());
                 statement.setBlob(6, new ByteArrayInputStream(data.asBytes(plugin)));
+                statement.setString(7, data.setOriginServer());
                 statement.executeUpdate();
             }
         } catch (SQLException | DataAdapter.AdaptionException e) {
@@ -376,14 +377,15 @@ public class MySqlDatabase extends Database {
         try (Connection connection = getConnection()) {
             try (PreparedStatement statement = connection.prepareStatement(formatStatementTables("""
                     UPDATE `%user_data_table%`
-                    SET `save_cause`=?,`pinned`=?,`data`=?
+                    SET `save_cause`=?,`pinned`=?,`data`=?,`origin_server`=?
                     WHERE `player_uuid`=? AND `version_uuid`=?
                     LIMIT 1;"""))) {
                 statement.setString(1, data.getSaveCause().name());
                 statement.setBoolean(2, data.isPinned());
                 statement.setBlob(3, new ByteArrayInputStream(data.asBytes(plugin)));
-                statement.setString(4, user.getUuid().toString());
-                statement.setString(5, data.getId().toString());
+                statement.setString(4, data.setOriginServer());
+                statement.setString(5, user.getUuid().toString());
+                statement.setString(6, data.getId().toString());
                 statement.executeUpdate();
             }
         } catch (SQLException e) {

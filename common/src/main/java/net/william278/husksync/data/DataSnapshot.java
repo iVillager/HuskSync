@@ -31,6 +31,7 @@ import org.jetbrains.annotations.ApiStatus;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import java.io.File;
 import java.time.OffsetDateTime;
 import java.util.*;
 import java.util.function.Consumer;
@@ -73,9 +74,12 @@ public class DataSnapshot {
     @SerializedName("data")
     protected Map<String, String> data;
 
+    @SerializedName("origin_server")
+    protected String originServer;
+
     private DataSnapshot(@NotNull UUID id, boolean pinned, @NotNull OffsetDateTime timestamp,
                          @NotNull SaveCause saveCause, @NotNull Map<String, String> data,
-                         @NotNull Version minecraftVersion, @NotNull String platformType, int formatVersion) {
+                         @NotNull Version minecraftVersion, @NotNull String platformType, int formatVersion, String originServer) {
         this.id = id;
         this.pinned = pinned;
         this.timestamp = timestamp;
@@ -84,6 +88,7 @@ public class DataSnapshot {
         this.minecraftVersion = minecraftVersion.toStringWithoutMetadata();
         this.platformType = platformType;
         this.formatVersion = formatVersion;
+        this.originServer = originServer;
     }
 
     @SuppressWarnings("unused")
@@ -241,6 +246,7 @@ public class DataSnapshot {
         return formatVersion;
     }
 
+
     /**
      * A packed {@link DataSnapshot} that has not been deserialized.
      *
@@ -250,8 +256,8 @@ public class DataSnapshot {
 
         protected Packed(@NotNull UUID id, boolean pinned, @NotNull OffsetDateTime timestamp,
                          @NotNull SaveCause saveCause, @NotNull Map<String, String> data,
-                         @NotNull Version minecraftVersion, @NotNull String platformType, int formatVersion) {
-            super(id, pinned, timestamp, saveCause, data, minecraftVersion, platformType, formatVersion);
+                         @NotNull Version minecraftVersion, @NotNull String platformType, int formatVersion, String originServer) {
+            super(id, pinned, timestamp, saveCause, data, minecraftVersion, platformType, formatVersion, originServer);
         }
 
         @SuppressWarnings("unused")
@@ -276,7 +282,7 @@ public class DataSnapshot {
         public Packed copy() {
             return new Packed(
                     UUID.randomUUID(), pinned, OffsetDateTime.now(), saveCause, data,
-                    getMinecraftVersion(), platformType, formatVersion
+                    getMinecraftVersion(), platformType, formatVersion, originServer
             );
         }
 
@@ -301,7 +307,7 @@ public class DataSnapshot {
         public DataSnapshot.Unpacked unpack(@NotNull HuskSync plugin) {
             return new Unpacked(
                     id, pinned, timestamp, saveCause, data,
-                    getMinecraftVersion(), platformType, formatVersion, plugin
+                    getMinecraftVersion(), platformType, formatVersion, plugin, originServer
             );
         }
 
@@ -320,15 +326,15 @@ public class DataSnapshot {
         private Unpacked(@NotNull UUID id, boolean pinned, @NotNull OffsetDateTime timestamp,
                          @NotNull SaveCause saveCause, @NotNull Map<String, String> data,
                          @NotNull Version minecraftVersion, @NotNull String platformType, int formatVersion,
-                         @NotNull HuskSync plugin) {
-            super(id, pinned, timestamp, saveCause, data, minecraftVersion, platformType, formatVersion);
+                         @NotNull HuskSync plugin, String originServer) {
+            super(id, pinned, timestamp, saveCause, data, minecraftVersion, platformType, formatVersion, originServer);
             this.deserialized = deserializeData(plugin);
         }
 
         private Unpacked(@NotNull UUID id, boolean pinned, @NotNull OffsetDateTime timestamp,
                          @NotNull SaveCause saveCause, @NotNull Map<Identifier, Data> data,
-                         @NotNull Version minecraftVersion, @NotNull String platformType, int formatVersion) {
-            super(id, pinned, timestamp, saveCause, Map.of(), minecraftVersion, platformType, formatVersion);
+                         @NotNull Version minecraftVersion, @NotNull String platformType, int formatVersion, String originServer) {
+            super(id, pinned, timestamp, saveCause, Map.of(), minecraftVersion, platformType, formatVersion, originServer);
             this.deserialized = data;
         }
 
@@ -378,7 +384,7 @@ public class DataSnapshot {
         public DataSnapshot.Packed pack(@NotNull HuskSync plugin) {
             return new DataSnapshot.Packed(
                     id, pinned, timestamp, saveCause, serializeData(plugin),
-                    getMinecraftVersion(), platformType, formatVersion
+                    getMinecraftVersion(), platformType, formatVersion, originServer
             );
         }
 
@@ -668,8 +674,11 @@ public class DataSnapshot {
                     data,
                     plugin.getMinecraftVersion(),
                     plugin.getPlatformType(),
-                    DataSnapshot.CURRENT_FORMAT_VERSION
+                    DataSnapshot.CURRENT_FORMAT_VERSION,
+                    setOriginServer()
+
             );
+
         }
 
         /**
@@ -815,5 +824,16 @@ public class DataSnapshot {
             return Optional.empty();
         }
 
+    }
+
+    public String getOriginServer() {
+        if (originServer != null) {
+            return originServer;
+        }
+        return "N/A";
+    }
+
+    public static String setOriginServer() {
+        return new File(System.getProperty("user.dir")).getName();
     }
 }

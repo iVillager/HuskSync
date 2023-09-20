@@ -23,6 +23,7 @@ CREATE TABLE IF NOT EXISTS `%user_data_table%`
     `save_cause`   varchar(32) NOT NULL,
     `pinned`       boolean     NOT NULL DEFAULT FALSE,
     `data`         longblob    NOT NULL,
+    `origin_server` varchar(32) NOT NULL,
     PRIMARY KEY (`version_uuid`, `player_uuid`),
     FOREIGN KEY (`player_uuid`) REFERENCES `%users_table%` (`uuid`) ON DELETE CASCADE
 ) CHARACTER SET utf8
